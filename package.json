@@ -1,6 +1,6 @@
 {
   "name": "e9api",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Wrapper for e926.net's api.",
   "main": "src/index.js",
   "types": "src/index.d.ts",
