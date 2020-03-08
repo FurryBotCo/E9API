@@ -11,54 +11,62 @@ class APIError extends Error {
 	}
 }
 
+// a lot of changes and removes due to e926 api changes
+
 interface E926Post {
 	id: number;
-	tags: string;
-	locked_tags?: string;
-	description?: string;
-	created_at: {
-		json_class: "Time";
-		s: number;
-		n: number;
+	created_at: string; // ISO timestamp
+	updated_at: string; // ISO timestamp
+	file: {
+		width: number;
+		height: number;
+		ext: string;
+		size: number;
+		md5: string;
+		url: string;
 	};
-	creator_id?: number;
-	author?: string;
-	change: number;
-	source?: string;
-	score: number;
-	fav_count: number;
-	md5?: string;
-	file_size?: number;
-	file_url?: string;
-	file_ext?: string;
-	preview_url?: string;
-	preview_width?: number;
-	preview_height?: number;
-	sample_url?: string;
-	sample_width?: number;
-	sample_height?: number;
+	preview: {
+		width: number;
+		height: number;
+		url: string;
+	};
+	sample: {
+		has: boolean;
+		height: number;
+		width: number;
+		url: string;
+	};
+	score: {
+		up: number;
+		down: number;
+		total: number;
+	};
+	tags: {
+		[k in "general" | "species" | "character" | "copyright" | "artist" | "invalid" | "lore" | "meta"]: string[];
+	};
+	locked_tags: string[]; // @TODO
+	change_seq: number;
+	flags: {
+		[k in "pending" | "flagged" | "note_locked" | "status_locked" | "rating_locked" | "deleted"]: boolean;
+	};
 	rating: "s" | "q" | "e";
-	status: "active" | "deleted";
-	width: number;
-	height: number;
-	has_comments: boolean;
-	has_notes: boolean;
-	has_childeren?: boolean;
-	childeren?: string;
-	parent_id?: string;
-	artist?: string[];
-	sources?: string[];
-	delreason?: string;
+	fav_count: number;
+	sources: string[];
+	pools: number[];
+	relationships: {
+		parent_id?: number;
+		has_childeren: boolean;
+		has_active_childeren: boolean;
+		childeren: number[];
+	};
+	approver_id?: number;
+	uploader_id?: number;
+	description: string;
+	comment_count: number;
+	is_favorited: boolean;
 }
 
-interface E926Tag {
-	name: string;
-	id: number;
-	count: number;
-	type: 0 | 1 | 2 | 3 | 4 | 5;
-}
-
-class E9API {
+class E6API {
 	apiKey: string;
 	userAgent: string;
 	constructor(options?: {
@@ -67,13 +75,13 @@ class E9API {
 	}) {
 		if (!options) options = {};
 		if (!options.apiKey) options.apiKey = "";
-		if (!options.userAgent) options.userAgent = `E9API/${pkg.version} (https://github.com/FurryBotCo/E9API)`;
+		if (!options.userAgent) options.userAgent = `E6API/${pkg.version} (https://github.com/FurryBotCo/E6API)`;
 
 		this.apiKey = options.apiKey;
 		this.userAgent = options.userAgent;
 	}
 
-	async login(user: string, pass: string) {
+	/*async login(user: string, pass: string) {
 		return phin({
 			method: "GET",
 			url: `https://e926.net/user/login.json?name=${user}&password=${pass}`,
@@ -88,7 +96,7 @@ class E9API {
 		}).catch(err => {
 			throw err;
 		});
-	}
+	}*/
 
 	// not implemented yet
 	/*async createPost(post: {
@@ -149,7 +157,7 @@ class E9API {
 		if (typeof fetchImage !== "boolean") fetchImage = false;
 		return phin({
 			method: "GET",
-			url: `https://e926.net/post/show.json?id=${id}`,
+			url: `https://e926.net/posts/${id}.json`,
 			headers: {
 				"User-Agent": this.userAgent
 			}
@@ -170,7 +178,7 @@ class E9API {
 		});
 	}
 
-	getPostByMD5(md5: string, fetchImage?: false): Promise<E926Post>;
+	/*getPostByMD5(md5: string, fetchImage?: false): Promise<E926Post>;
 	getPostByMD5(md5: string, fetchImage?: true): Promise<{ image: Buffer; post: E926Post }>;
 
 	async getPostByMD5(md5: string, fetchImage?: boolean) {
@@ -192,12 +200,12 @@ class E9API {
 
 			return fetchImage ? this.getPostById(b.post_id, fetchImage as true) : this.getPostById(b.post_id, fetchImage as false);
 		});
-	}
+	}*/
 
-	async getPostTagsById(id: number): Promise<{ id: number; tags: E926Tag[] }> {
+	/*async getPostTagsById(id: number): Promise<{ id: number; tags: E926Tag[] }> {
 		return phin({
 			method: "GET",
-			url: `https://e926.net/post/tags.json?id=${id}`,
+			url: `https://e926.net/posts/${id}.json`,
 			headers: {
 				"User-Agent": this.userAgent
 			}
@@ -209,7 +217,7 @@ class E9API {
 
 			return {
 				id,
-				tags: b
+				tags: b.tags
 			};
 		}).catch(err => {
 			throw err;
@@ -219,7 +227,7 @@ class E9API {
 	async getPostTagsByMD5(md5: string): Promise<{ md5: string; tags: E926Tag[] }> {
 		return phin({
 			method: "GET",
-			url: `https://e926.net/post/tags.json?md5=${md5}`,
+			url: `https://e926.net/posts.json?md5=${md5}`,
 			headers: {
 				"User-Agent": this.userAgent
 			}
@@ -236,7 +244,7 @@ class E9API {
 		}).catch(err => {
 			throw err;
 		});
-	}
+	}*/
 
 	async listPosts(tags?: string[], limit?: number, page?: number, beforeId?: number, filterTags?: string[]): Promise<E926Post[]> {
 		const q: {
@@ -260,7 +268,7 @@ class E9API {
 
 		return phin({
 			method: "GET",
-			url: `https://e926.net/post/index.json${Object.keys(q).length > 0 ? `?${qs.encode(q)}` : ""}`,
+			url: `https://e926.net/posts.json${Object.keys(q).length > 0 ? `?${qs.encode(q)}` : ""}`,
 			headers: {
 				"User-Agent": this.userAgent
 			}
@@ -268,9 +276,9 @@ class E9API {
 			if (res.statusCode === 404) return null;
 			if (res.statusCode !== 200) throw new APIError(`${res.statusCode} ${res.statusMessage}`, res.body.toString());
 
-			const b = JSON.parse(res.body.toString());
+			const b = JSON.parse(res.body.toString()).posts;
 
-			return filterTags && filterTags.length > 0 ? b.filter(p => !filterTags.some(t => p.tags.split(" ").includes(t))) : b;
+			return filterTags && filterTags.length > 0 ? b.filter((p: E926Post) => !filterTags.some(t => Object.values(p.tags).reduce((a, b) => a.concat(b)).includes(t))) : b;
 		}).catch(err => {
 			throw err;
 		});
@@ -334,7 +342,7 @@ class E9API {
 		});
 	}*/
 
-	async getDeletedPosts(page?: number, userId?: number): Promise<{ id: number; creator_id: number; author?: string; tags: string; delreason: string; }[]> {
+	/*async getDeletedPosts(page?: number, userId?: number): Promise<{ id: number; creator_id: number; author?: string; tags: string; delreason: string; }[]> {
 		return phin({
 			method: "GET",
 			url: `https://e926.net/post/deleted_index.json${page || userId ? `?${page ? `page=${page}${userId ? `&user_id=${userId}` : ""}` : ""}` : ""}`,
@@ -351,12 +359,12 @@ class E9API {
 		}).catch(err => {
 			throw err;
 		});
-	}
+	}*/
 
 	async getPopularPosts(type: "day" | "week" | "month"): Promise<E926Post[]> {
 		return phin({
 			method: "GET",
-			url: `https://e926.net/post/popular_by_${type}.json`,
+			url: `https://e926.net/explore/posts/popular.json?scale=${type}`,
 			headers: {
 				"User-Agent": this.userAgent
 			}
@@ -364,7 +372,7 @@ class E9API {
 			if (res.statusCode === 404) return null;
 			if (res.statusCode !== 200) throw new APIError(`${res.statusCode} ${res.statusMessage}`, res.body.toString());
 
-			const b = JSON.parse(res.body.toString());
+			const b = JSON.parse(res.body.toString()).posts;
 			return b;
 		}).then(err => {
 			throw err;
@@ -376,4 +384,4 @@ class E9API {
 	}*/
 }
 
-export = E9API;
+export = E6API;
