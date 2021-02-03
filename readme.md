@@ -1,3 +1,6 @@
+# Deprecated
+This module has been deprecated in favor of the [e621](https://npm.im/e621) module. This module will not be updated anymore.
+
 ## <center>E926 Api Module</center>
 
 (side note: this is an SFW ONLY version of [E6API](https://npmjs.org/package/E6API), the filtering is done by sending requests to e926.net instead of e621.net, you should do filtering on your side as well if you want only sfw posts, as there is no extra filtering being done!)
